@@ -4,12 +4,18 @@ import User from "../models/User.js";
 // Create User
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, vehicle_details } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      profileImage,
+      vehicle_details,
+    } = req.body;
 
-    if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ error: "Name, email, and password are required" });
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ error: "First name, last name, email, and password are required" });
     }
 
     if (vehicle_details?.length > 0) {
@@ -23,12 +29,20 @@ export const createUser = async (req, res) => {
       }
     }
 
-    const newUser = await User.create(req.body);
+    const newUser = await User.create({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      profileImage,
+      vehicle_details,
+    });
 
     res.status(201).json(newUser);
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ error: "Email already exists" });
+      return res.status(400).json({ error: "Email or plate number already exists" });
     }
     res.status(500).json({
       error: "Server error",
@@ -36,6 +50,7 @@ export const createUser = async (req, res) => {
     });
   }
 };
+
 
 // Get all users
 export const getUsers = async (req, res) => {
@@ -66,15 +81,19 @@ export const getUser = async (req, res) => {
     });
   }
 };
+
 // Update a user by id
 export const updateUser = async (req, res, next) => {
   const document = await User.findByIdAndUpdate(
     req.params.id,
     {
-      name: req.body.name,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
       phone: req.body.phone,
       email: req.body.email,
+      profileImage: req.body.profileImage,
       role: req.body.role,
+      birthDay: req.body.birthDay,
       vehicle_details: req.body.vehicle_details
     },
     {
@@ -82,10 +101,11 @@ export const updateUser = async (req, res, next) => {
     }
   );
   if (!document) {
-    return next(new ApiError(`No document for this id: ${req.params.id}`, 404));
+    return next(new Error(`No document for this id: ${req.params.id}`, 404));
   }
   res.status(200).json({ data: document });
 };
+
 // Update user password
 export const updateUserPassword = async (req, res, next) => {
   const document = await User.findByIdAndUpdate(
@@ -98,10 +118,11 @@ export const updateUserPassword = async (req, res, next) => {
     }
   );
   if (!document) {
-    return next(new ApiError(`No document for this id: ${req.params.id}`, 404));
+    return next(new Error(`No document for this id: ${req.params.id}`, 404));
   }
   res.status(200).json({ data: document });
 };
+
 // Delete user by id
 export const deleteUser = async (req, res) => {
   try {
@@ -113,11 +134,12 @@ export const deleteUser = async (req, res) => {
       message: "User deleted successfully",
       deletedUser: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
       },
     });
-  } catch (error) {
+  } catch (err) {
     if (err.name === "CastError") {
       return res.status(400).json({ error: "Invalid user ID format" });
     }
@@ -141,7 +163,7 @@ export const checkPlateNumber = async (req, res) => {
     const user = await User.findOne({
       "vehicle_details.plate_Char": plate_Char,
       "vehicle_details.Plate_Num": Plate_Num,
-    }).select("name email password phone vehicle_details");
+    }).select("firstName lastName email password phone vehicle_details");
 
     if (!user) {
       return res.status(404).json({
@@ -158,10 +180,13 @@ export const checkPlateNumber = async (req, res) => {
       authorized: true,
       user: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         password: user.password,
+        profileImage: user.profileImage,
         phone: user.phone,
+        birthDay: user.birthDay,
       },
       vehicle: {
         plate_Char: matchedVehicle.plate_Char,
@@ -175,3 +200,43 @@ export const checkPlateNumber = async (req, res) => {
     });
   }
 };
+
+
+export const getLoggedUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const updateLoggedInUser = async (req, res) => {
+  try {
+    const updates = {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      phone: req.body.phone,
+      birthDay: req.body.birthDay,
+      vehicle_details: req.body.vehicle_details,
+      profileImage: req.file ? `/uploads/users/${req.file.filename}` : req.body.profileImage,
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+

@@ -7,6 +7,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import userRoutes from "./routes/user.js";
 import authRoutes from "./routes/auth.js";
+import bookingRoutes from "./routes/booking.js";
+import garageRoutes from "./routes/garage.js";
+
 // import User from "./models/User.js";
 // import { userData } from "./data/index.js";
 
@@ -27,6 +30,10 @@ app.use(
 
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/garage", garageRoutes);
+
+app.use("/uploads/users", express.static("uploads"));
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`🚀 Server is running on port: ${PORT}`));
