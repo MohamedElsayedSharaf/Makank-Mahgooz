@@ -8,7 +8,7 @@ export const createGarage = async (req, res) => {
     for (let i = 1; i <= 16; i++) {
       spots.push({ spotId: i });
     }
-
+cd
     const garage = await Garage.create({ spots });
     res.status(201).json(garage);
   } catch (err) {
